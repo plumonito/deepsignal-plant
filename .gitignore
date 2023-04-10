@@ -1,0 +1,4 @@
+build
+deepsignal_plant.egg-info
+dist
+__pycache__
