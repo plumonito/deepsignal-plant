@@ -244,14 +244,23 @@ def _call_mods_q(model_path, features_batch_q, pred_str_q, success_file, args, d
             # open(success_file, 'w').close()
             break
 
+        tstart = time.time()
+
         pred_str, accuracy, batch_num = _call_mods(features_batch, model, args.batch_size, device)
+
+        tend = time.time()
+        duration = tend-tstart
+        reads_per_second = args.f5_batch_size / duration
 
         pred_str_q.put(pred_str)
         while pred_str_q.qsize() > queue_size_border:
             time.sleep(time_wait)
         # for debug
-        # print("call_mods process-{} reads 1 batch, features_batch_q:{}, "
-        #       "pred_str_q: {}".format(os.getpid(), features_batch_q.qsize(), pred_str_q.qsize()))
+        print(f"call_mods process-{os.getpid()} reads 1 batch, duration: {duration:.2f}, reads/s: {reads_per_second:.2f}, "
+              f"features_batch_q:{features_batch_q.qsize()}, "
+              f"pred_str_q: {pred_str_q.qsize()}")
+        sys.stdout.flush()
+
         accuracy_list.append(accuracy)
         batch_num_total += batch_num
     # print('total accuracy in process {}: {}'.format(os.getpid(), np.mean(accuracy_list)))
@@ -348,9 +357,21 @@ def _read_features_fast5s_q(fast5s_q, features_batch_q, errornum_q,
             fast5s_q.put("kill")
             break
         f5_num += len(fast5s)
+
+        tstart = time.time()
+
         features_batches, error = _read_features_from_fast5s(fast5s, motif_seqs, chrom2len, positions, regioninfo,
                                                              args)
+
+        tend = time.time()
+        duration = tend-tstart
+        reads_per_second = len(fast5s) / duration
+
         errornum_q.put(error)
+
+        sys.stdout.write(f"Queueing fast5s: {len(fast5s)}, duration: {duration:.2f}, reads/s: {reads_per_second:.2f}, features: {len(features_batches)}, queue size: {features_batch_q.qsize()}\n")
+        sys.stdout.flush()
+
         for features_batch in features_batches:
             while features_batch_q.qsize() > queue_size_border_f5batch:
                 time.sleep(time_wait)

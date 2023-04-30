@@ -171,8 +171,8 @@ def _get_alignment_info_from_fast5(fast5_path, corrected_group='RawGenomeCorrect
             return readname, strand, alignstrand, chrom, chrom_start
         else:
             return '', '', '', '', ''
-    except IOError:
-        print("[WARN]file-{} can't be opened".format(fast5_path))
+    except IOError as err:
+        print("[WARN]file-{} can't be opened: {}".format(fast5_path, err))
         return '', '', '', '', ''
 
 
@@ -556,6 +556,8 @@ def _extract_preprocess_(motifs, is_dna, reference_path, position_file, regionst
 def _extract_preprocess_fast5sinfo(fast5_dir, is_recursive, f5_batch_num, fast5s_q):
     fast5_files = get_fast5s(fast5_dir, is_recursive)
     print("{} fast5 files in total..".format(len(fast5_files)))
+    print("  e.g. {}".format(fast5_files[0]))
+
     _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
 
     return fast5s_q, len(fast5_files)
