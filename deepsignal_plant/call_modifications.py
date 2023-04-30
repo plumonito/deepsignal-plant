@@ -352,9 +352,9 @@ def _read_features_fast5s_q(fast5s_q, features_batch_q, errornum_q,
                                                              args)
         errornum_q.put(error)
         for features_batch in features_batches:
+            while features_batch_q.qsize() > queue_size_border_f5batch:
+                time.sleep(time_wait)
             features_batch_q.put(features_batch)
-        while features_batch_q.qsize() > queue_size_border_f5batch:
-            time.sleep(time_wait)
     print("read_fast5 process-{} ending, proceed {} fast5s".format(os.getpid(), f5_num))
 
 
