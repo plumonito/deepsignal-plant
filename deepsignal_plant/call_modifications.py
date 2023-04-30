@@ -47,8 +47,8 @@ else:
 # https://github.com/pytorch/pytorch/issues/37377
 os.environ['MKL_THREADING_LAYER'] = 'GNU'
 
-queue_size_border_f5batch = 100
-queue_size_border = 1000
+queue_size_border_f5batch = 10
+queue_size_border = 100
 time_wait = 1
 
 
