@@ -549,14 +549,29 @@ def call_mods(args):
     model_path = os.path.abspath(args.model_path)
     if not os.path.exists(model_path):
         raise ValueError("--model_path is not set right!")
-    input_path = os.path.abspath(args.input_path)
-    if not os.path.exists(input_path):
-        raise ValueError("--input_path does not exist!")
-    success_file = input_path.rstrip("/") + "." + str(uuid.uuid1()) + ".success"
+
+    success_file = args.input_path or args.input_list or args.features_file
+    success_file = success_file.rstrip("/") + "." + str(uuid.uuid1()) + ".success"
     if os.path.exists(success_file):
         os.remove(success_file)
 
-    if os.path.isdir(input_path):  # call modifications from directory that contains fast5s
+    if args.input_path or args.input_list:  # call modifications from fast5s
+        # Either a directory of fast5 or a path to a features file
+        # Treat input_path and input_list as the same, 
+        # if it is a file, it will be assumed to be a list,
+        # if it is a dir, it will be assumed to contain fast5 files.
+
+        if args.input_path:
+            input_path = os.path.abspath(args.input_path)
+            if not os.path.isdir(input_path):
+                raise ValueError("--input_path is not a directory!")
+        else:
+            input_path = os.path.abspath(args.input_list)
+            if os.path.isdir(input_path):
+                raise ValueError("--input_list is a directory, not a file!")
+        if not os.path.exists(input_path):
+            raise ValueError("input does not exist!")
+
         # motif_seqs, chrom2len, fast5s_q, len_fast5s, positions, \
         #     regioninfo = _extract_preprocess(input_path,
         #                                      str2bool(args.recursively),
@@ -582,9 +597,15 @@ def call_mods(args):
                                         model_path,
                                         success_file, args)
     else:  # call modifications from feature_file
+        features_file = os.path.abspath(args.features_file)
+        if not os.path.exists(features_file):
+            raise ValueError("--features_file does not exist!")
+        if os.path.isdir(features_file):
+            raise ValueError("--features_file is a directory, not a file!")
+
         # features_batch_q = mp.Queue()
         features_batch_q = Queue()
-        p_rf = mp.Process(target=_read_features_file, args=(input_path, features_batch_q,
+        p_rf = mp.Process(target=_read_features_file, args=(features_file, features_batch_q,
                                                             args.f5_batch_size))
         p_rf.daemon = True
         p_rf.start()
@@ -644,11 +665,18 @@ def main():
     parser = argparse.ArgumentParser("call modifications")
 
     p_input = parser.add_argument_group("INPUT")
-    p_input.add_argument("--input_path", "-i", action="store", type=str,
-                         required=True,
-                         help="the input path, can be a signal_feature file from extract_features.py, "
-                              "or a directory of fast5 files. If a directory of fast5 files is provided, "
-                              "args in FAST5_EXTRACTION should be provided.")
+
+    input_location_group = p_input.add_mutually_exclusive_group(required=True)
+    input_location_group.add_argument("--features_file", action="store", type=str,
+                         help="a signal_feature file from extract_features.py, "
+                              "no fast5 files need to be read.")
+    input_location_group.add_argument("--input_path", "-i", action="store", type=str,
+                         help="a directory of fast5 files. "
+                              "Args in FAST5_EXTRACTION should be provided.")
+    input_location_group.add_argument("--input_list", action="store", type=str,
+                         help="a file containing a list of all fast5 files to process. "
+                              "Args in FAST5_EXTRACTION should be provided.")
+
     p_input.add_argument("--f5_batch_size", action="store", type=int, default=30,
                          required=False,
                          help="number of reads/files to be processed by each process one time, default 30")

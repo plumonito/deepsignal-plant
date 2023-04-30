@@ -146,18 +146,24 @@ def get_motif_seqs(motifs, is_dna=True):
 
 
 def get_fast5s(fast5_dir, is_recursive=True):
-    fast5_dir = os.path.abspath(fast5_dir)
-    fast5s = []
-    if is_recursive:
-        for root, dirnames, filenames in os.walk(fast5_dir):
-            for filename in fnmatch.filter(filenames, '*.fast5'):
-                fast5_path = os.path.join(root, filename)
-                fast5s.append(fast5_path)
+    if os.path.isdir(fast5_dir):
+        fast5_dir = os.path.abspath(fast5_dir)
+        fast5s = []
+        if is_recursive:
+            for root, dirnames, filenames in os.walk(fast5_dir):
+                for filename in fnmatch.filter(filenames, '*.fast5'):
+                    fast5_path = os.path.join(root, filename)
+                    fast5s.append(fast5_path)
+                break
+        else:
+            for fast5_name in os.listdir(fast5_dir):
+                if fast5_name.endswith('.fast5'):
+                    fast5_path = '/'.join([fast5_dir, fast5_name])
+                    fast5s.append(fast5_path)
     else:
-        for fast5_name in os.listdir(fast5_dir):
-            if fast5_name.endswith('.fast5'):
-                fast5_path = '/'.join([fast5_dir, fast5_name])
-                fast5s.append(fast5_path)
+        with open(fast5_dir) as fd:
+            fast5s = [line.rstrip() for line in fd]
+
     return fast5s
 
 
